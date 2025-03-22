@@ -30,7 +30,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-#--------------------- get the parent's name ---------------------------
+#--------------------- get name ---------------------------
 @router.get("/parent/name")
 def get_parent_name(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
@@ -48,6 +48,16 @@ def get_parent_name(current_user: dict = Depends(parent_module.getCurrentUser)):
         "data": parent_name
     }
 
+#--------------------- Get Parent Information ---------------------------
+@router.get("/parent/info")
+def get_parent_info(current_user: dict = Depends(parent_module.getCurrentUser)):
+    parentUserName = current_user['parentUserName']
+    parent_info = parent_module.get_parent_info(parentUserName)
+    
+    return {
+        "message": "Parent information retrieved successfully",
+        "data": parent_info
+    }
 #----------------- get the children of the parent -----------------------
 @router.get("/parent/children")
 def get_all_children(current_user: dict = Depends(parent_module.getCurrentUser)):
@@ -60,7 +70,7 @@ def get_all_children(current_user: dict = Depends(parent_module.getCurrentUser))
     }
 
 
-#---------------------- delete parent account --------------------------
+#---------------------- delete account --------------------------
 @router.delete("/parent/delete")
 def delete_parent_account(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
@@ -71,8 +81,24 @@ def delete_parent_account(current_user: dict = Depends(parent_module.getCurrentU
         "data": result
     }
 
-
-#----------------------- update parent settings -------------------------
+#--------------------- Get Parent Information ---------------------------
+@router.get("/parent/info")
+def get_parent_info(current_user: dict = Depends(parent_module.getCurrentUser)):
+    parentUserName = current_user['parentUserName']
+    parent_info = parent_module.get_parent_info(parentUserName)
+    
+    if not parent_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parent not found",
+        )
+    
+    return {
+        "message": "Parent information retrieved successfully",
+        "data": parent_info
+    }
+    
+#----------------------- update settings -------------------------
 @router.put("/parent/settings")
 def update_parent_settings(
     settings: dict, 

@@ -84,6 +84,18 @@ def get_parent_name(parentUserName: str):
         return dict(result)
     raise HTTPException(status_code=404, detail="Parent not found")
 
+def get_parent_info(parentUserName: str):
+    """
+    Fetch the parent's information from the database.
+    """
+    with get_connection() as conn:
+        query = sa.text("SELECT * FROM Parent WHERE parentUserName = :username")
+        result = conn.execute(query, {"username": parentUserName}).mappings().fetchone()
+    
+    if not result:
+        return None
+    
+    return dict(result)
 
 def update_child_settings(parentUserName: str, childUserName: str, settings: dict):
     with get_connection() as conn:

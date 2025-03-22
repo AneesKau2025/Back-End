@@ -25,15 +25,15 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Generate an access token
+    # Generate an access token 
     access_token_expires = timedelta(minutes=child_module.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = child_module.createAccessToken(
         data={"sub": form_data.username}, expiresDelta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
-# -------------------- get child's info --------------------
-@router.get("/child/")
+# -------------------- get full info --------------------
+@router.get("/child/info")
 def read_child(current_user: dict = Depends(getCurrentUser)):
     if current_user["userType"] != "child":
         raise HTTPException(
@@ -43,7 +43,7 @@ def read_child(current_user: dict = Depends(getCurrentUser)):
     childUserName = current_user["childUserName"]
     return child_module.get_child(childUserName)
 
-# ---------------------- get child name ------------------------
+# ---------------------- get name ------------------------
 @router.get("/child/name")
 def get_child_name(current_user: dict = Depends(getCurrentUser)):
     if current_user["userType"] != "child":
@@ -53,7 +53,7 @@ def get_child_name(current_user: dict = Depends(getCurrentUser)):
         )
     childUserName = current_user["childUserName"]
     return child_module.get_child_name(childUserName)
-#-------------------- Update child settings --------------------
+#-------------------- Update settings --------------------
 @router.put("/child/settings")
 def update_child_settings(
     child_data: child_module.Child,
@@ -67,7 +67,30 @@ def update_child_settings(
     childUserName = current_user["childUserName"]
     return child_module.update_settings(childUserName, child_data)
 
+# -------------------- get friends --------------------
+@router.get("/child/friends")
+def get_friends(current_user: dict = Depends(getCurrentUser)):
+    if current_user["userType"] != "child":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this data"
+        )
+    childUserName = current_user["childUserName"]
+    return child_module.get_friends(childUserName)
+
+#--------------------  logging out --------------------------
+@router.post("/child/logout")
+def logout():
+    return {
+        "message": "Logged out successfully. ",
+        "data": None
+    }
+    
+    
+#----------------------------------------------------------------
 #--------------------- Friends APIs -----------------------------
+#----------------------------------------------------------------
+
 # send friend request 
 @router.post("/friend/request")
 def send_friend_request(
@@ -122,21 +145,3 @@ def block_friend(
     childUserName = current_user["childUserName"]
     return child_module.block_friend(childUserName, friendUserName)
 
-# -------------------- get child's friends --------------------
-@router.get("/child/friends")
-def get_friends(current_user: dict = Depends(getCurrentUser)):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to access this data"
-        )
-    childUserName = current_user["childUserName"]
-    return child_module.get_friends(childUserName)
-
-#--------------------  logging out --------------------------
-@router.post("/child/logout")
-def logout():
-    return {
-        "message": "Logged out successfully. ",
-        "data": None
-    }

@@ -1,22 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta, datetime
 from app.modules import child as child_module
-from app.modules.parent import getCurrentUser  
-from datetime import timedelta
-
+from pydantic import BaseModel
+from typing import Optional
 
 
 router = APIRouter()
 
-# -------------------- create a child --------------------
-@router.post("/child/")
+# ==================== Request/Response Models ====================
+class FriendRequestIn(BaseModel):
+    receiverChildUserName: str
+    
+class FriendRequestOut(BaseModel):
+    requestID: int
+    requestStatus: str
+    requestTimeStamp: datetime
+    senderUserName: str
+    senderFirstName: str
+    senderLastName: str
+    senderProfileIcon: Optional[str] = None
+
+# ==================== Authentication Endpoints ====================
+@router.post("/child/signup", status_code=status.HTTP_201_CREATED)
 def add_child(child_data: child_module.Child):
+    """Register a new child account"""
     return child_module.create_child(child_data)
 
-# ---------------------- login -----------------------------
 @router.post("/child/login", response_model=child_module.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Authenticate the child user
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends()
+):
+    """Authenticate and get access token"""
     user = child_module.authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -24,124 +39,129 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-    # Generate an access token 
-    access_token_expires = timedelta(minutes=child_module.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
     access_token = child_module.createAccessToken(
-        data={"sub": form_data.username}, expiresDelta=access_token_expires
+        data={"sub": form_data.username},
+        expires_delta=timedelta(minutes=child_module.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
-# -------------------- get full info --------------------
-@router.get("/child/info")
-def read_child(current_user: dict = Depends(getCurrentUser)):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to access this data"
-        )
-    childUserName = current_user["childUserName"]
-    return child_module.get_child(childUserName)
 
-# ---------------------- get name ------------------------
+# ==================== Child Profile Endpoints ====================
 @router.get("/child/name")
-def get_child_name(current_user: dict = Depends(getCurrentUser)):
-    if current_user["userType"] != "child":
+def get_child_name(
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Get child's first and last name"""
+    child_name = child_module.get_child_name(current_user['childUserName'])
+    if not child_name:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to access this data"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found"
         )
-    childUserName = current_user["childUserName"]
-    return child_module.get_child_name(childUserName)
-#-------------------- Update settings --------------------
+    return child_name
+
+@router.get("/child/info")
+def get_child_info(
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Get complete child information"""
+    child_info = child_module.get_child(current_user['childUserName'])
+    if not child_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found"
+        )
+    return child_info
+
 @router.put("/child/settings")
 def update_child_settings(
-    child_data: child_module.Child,
-    current_user: dict = Depends(getCurrentUser)
+    settings: dict,
+    current_user: dict = Depends(child_module.getCurrentUser)
 ):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to update this child's settings"
-        )
-    childUserName = current_user["childUserName"]
-    return child_module.update_settings(childUserName, child_data)
+    """Update child profile settings"""
+    return child_module.update_settings(current_user['childUserName'], settings)
 
-# -------------------- get friends --------------------
-@router.get("/child/friends")
-def get_friends(current_user: dict = Depends(getCurrentUser)):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to access this data"
-        )
-    childUserName = current_user["childUserName"]
-    return child_module.get_friends(childUserName)
-
-#--------------------  logging out --------------------------
-@router.post("/child/logout")
-def logout():
-    return {
-        "message": "Logged out successfully. ",
-        "data": None
-    }
-    
-    
-#----------------------------------------------------------------
-#--------------------- Friends APIs -----------------------------
-#----------------------------------------------------------------
-
-# send friend request 
-@router.post("/friend/request")
+# ==================== Friendship Endpoints ====================
+@router.post("/child/friend/request", status_code=status.HTTP_201_CREATED)
 def send_friend_request(
-    receiverChildUserName: str,
-    current_user: dict = Depends(getCurrentUser)
+    request: FriendRequestIn,
+    current_user: dict = Depends(child_module.getCurrentUser)
 ):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to send this request"
-        )
-    senderChildUserName = current_user["childUserName"]
-    return child_module.create_friend_request(senderChildUserName, receiverChildUserName)
+    """Send a friend request to another child"""
+    return child_module.create_friend_request(
+        sender=current_user['childUserName'],
+        receiver=request.receiverChildUserName
+    )
 
-#-------------------- accept friend request --------------------
-@router.post("/friend/accept/{requestID}")
-def accept_request(
-    requestID: int,
-    current_user: dict = Depends(getCurrentUser)
+@router.get("/child/friend/request")
+def view_friend_requests(
+    current_user: dict = Depends(child_module.getCurrentUser)
 ):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to accept this request"
-        )
-    return child_module.accept_friend_request(requestID)
+    try:
+        child_username = current_user['childUserName']
+        requests = child_module.get_friend_requests(child_username)
+        
+        if not requests:
+            return {
+                "message": "No friend requests found",
+                "data": []
+            }
+            
+        return {
+            "message": "Friend requests retrieved successfully",
+            "data": requests
+        }
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-#-------------------- reject friend request --------------------
-@router.post("/friend/decline/{requestID}")
-def decline_request(
-    requestID: int,
-    current_user: dict = Depends(getCurrentUser)
+@router.post("/child/friend/accept/{request_id}")
+def accept_friend_request(
+    request_id: int,
+    current_user: dict = Depends(child_module.getCurrentUser)
 ):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to decline this request"
-        )
-    return child_module.reject_friend_request(requestID)
+    """Accept a pending friend request"""
+    return child_module.accept_friend_request(
+        request_id=request_id,
+        receiver=current_user['childUserName']
+    )
 
-# -------------------- block friend --------------------
-@router.post("/friend/block/{friendUserName}")
+@router.post("/child/friend/reject/{request_id}")
+def reject_friend_request(
+    request_id: int,
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Reject a pending friend request"""
+    return child_module.reject_friend_request(
+        request_id=request_id,
+        receiver=current_user['childUserName']
+    )
+
+@router.get("/child/friends")
+def get_friends(
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Get list of all friends"""
+    return child_module.get_friends(current_user['childUserName'])
+
+@router.post("/child/friend/block/{friendUserName}")
 def block_friend(
     friendUserName: str,
-    current_user: dict = Depends(getCurrentUser)
+    current_user: dict = Depends(child_module.getCurrentUser)
 ):
-    if current_user["userType"] != "child":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to block this friend"
-        )
-    childUserName = current_user["childUserName"]
-    return child_module.block_friend(childUserName, friendUserName)
+    """Block an existing friend"""
+    return child_module.block_friend(
+        childUserName=current_user['childUserName'],
+        friendUserName=friendUserName
+    )
 
+# ==================== Session Management ====================
+@router.post("/child/logout")
+def child_logout():
+    """Logout the current user (token invalidation handled client-side)"""
+    return {
+        "message": "Child logged out successfully",
+        "data": None
+    }

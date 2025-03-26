@@ -7,6 +7,13 @@ from fastapi.security import  OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext 
+from typing import Optional, Union
+from app.modules.child import Child  
+
+# --------------------- base models -----------------------
+class FriendResponse(BaseModel):
+    message: str
+    data: Optional[Union[dict, list]] = None
 
 class Parent(BaseModel):
     parentUserName: str
@@ -22,7 +29,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: str or None = None 
 
-#---------------------------------------------------------------------
+#-------------------------- constant --------------------------------
 SECRET_KEY="ca19e71bbdef859185ed9928a973d7af6095d2c6b9a6bed3684570f40439562f"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -30,8 +37,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 #---------------------------------------------------------------------
-
-
 
 def get_parent(parentUserName: str):
     with get_connection() as conn:
@@ -60,6 +65,36 @@ def create_parent(parent_data: Parent):
         conn.commit()
     
     return {"message": "Parent registered successfully!", "data": parent_data.dict()}
+
+
+def create_child(child_data: Child) -> FriendResponse:
+    """Create new child account, ensuring only the parent can do so"""
+    with get_connection() as conn:
+        conn.execute(
+            sa.text("""
+                INSERT INTO Child 
+                (childUserName, email, passwordHash, firstName, lastName, dateOfBirth, timeControl, parentUserName, profileIcon)
+                VALUES 
+                (:username, :email, :password, :firstName, :lastName, :dob, :timeControl, :parentUserName, :profileIcon)
+            """),
+            {
+                "username": child_data.childUserName,
+                "email": child_data.email,
+                "password": child_data.passwordHash,
+                "firstName": child_data.firstName,
+                "lastName": child_data.lastName,
+                "dob": child_data.dateOfBirth,
+                "timeControl": child_data.timeControl,
+                "parentUserName": child_data.parentUserName,  # Now enforced by the parent route
+                "profileIcon": child_data.profileIcon
+            }
+        )
+        conn.commit()
+    
+    return FriendResponse(
+        message="Child registered successfully!",
+        data=child_data.dict()
+    )
 
 
 

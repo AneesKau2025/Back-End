@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from app.modules import parent as parent_module
+from app.modules import child as child_module
 
 router = APIRouter()
 
@@ -30,6 +31,22 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
+#--------------------- add a child  ---------------------------
+@router.post("/parent/children/add", status_code=status.HTTP_201_CREATED)
+def add_child(
+    child_data: child_module.ChildCreate,  # now uses ChildCreate
+    current_user: dict = Depends(parent_module.getCurrentUser)
+):
+    parentUserName = current_user["parentUserName"]
+
+    # Manually build full Child model from ChildCreate + parentUserName
+    full_child_data = child_module.Child(
+        **child_data.dict(),
+        parentUserName=parentUserName
+    )
+
+    return parent_module.create_child(full_child_data)
+
 #--------------------- get name ---------------------------
 @router.get("/parent/name")
 def get_parent_name(current_user: dict = Depends(parent_module.getCurrentUser)):
@@ -43,10 +60,7 @@ def get_parent_name(current_user: dict = Depends(parent_module.getCurrentUser)):
             "data": None
         }
     
-    return {
-        "message": "parent name retrieved successfully",
-        "data": parent_name
-    }
+    return parent_name
 
 #--------------------- Get Parent Information ---------------------------
 @router.get("/parent/info")
@@ -54,32 +68,21 @@ def get_parent_info(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
     parent_info = parent_module.get_parent_info(parentUserName)
     
-    return {
-        "message": "Parent information retrieved successfully",
-        "data": parent_info
-    }
+    return parent_info
 #----------------- get the children of the parent -----------------------
 @router.get("/parent/children")
 def get_all_children(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
-    children = parent_module.get_children_of_parent(parentUserName)
-    
-    return {
-        "message": "children retrieved successfully",
-        "data": children
-    }
-
+    children = parent_module.get_children_of_parent(parentUserName)   
+    return children
 
 #---------------------- delete account --------------------------
 @router.delete("/parent/delete")
 def delete_parent_account(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
-    result = parent_module.delete_parent_account(parentUserName)
+    result = parent_module.delete_parent_account(parentUserName)    
+    return result
     
-    return {
-        "message": "parent account and associated children deleted successfully",
-        "data": result
-    }
 
 #--------------------- Get Parent Information ---------------------------
 @router.get("/parent/info")
@@ -91,12 +94,9 @@ def get_parent_info(current_user: dict = Depends(parent_module.getCurrentUser)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Parent not found",
-        )
+        )   
+    return parent_info
     
-    return {
-        "message": "Parent information retrieved successfully",
-        "data": parent_info
-    }
     
 #----------------------- update settings -------------------------
 @router.put("/parent/settings")
@@ -106,12 +106,8 @@ def update_parent_settings(
 ):
     parentUserName = current_user['parentUserName']
     result = parent_module.update_parent_settings(parentUserName, settings)
+    return result
     
-    return {
-        "message": "parent settings updated successfully",
-        "data": result
-    }
-
 
 #------------- setting time limits for parent's child  ------------------
 @router.put("/parent/children/{childUserName}/time-control")
@@ -121,12 +117,9 @@ def set_child_time_control(
     current_user: dict = Depends(parent_module.getCurrentUser)
 ):
     parentUserName = current_user['parentUserName']
-    result = parent_module.set_child_time_control(parentUserName, childUserName, time_control)
+    result = parent_module.set_child_time_control(parentUserName, childUserName, time_control)   
+    return result
     
-    return {
-        "message": "child time control updated successfully",
-        "data": result
-    }
 
 
 #-------------------- get the notifications --------------------------
@@ -134,11 +127,8 @@ def set_child_time_control(
 def get_notifications(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
     notifications = parent_module.get_notifications(parentUserName)
+    return notifications
     
-    return {
-        "message": "notifications retrieved successfully",
-        "data": notifications
-    }
 
 #-------------------- logging out --------------------------
 
@@ -146,7 +136,5 @@ def get_notifications(current_user: dict = Depends(parent_module.getCurrentUser)
 @router.post("/parent/logout")
 def parent_logout():
     return {
-        "status": "success",
-        "message": "Parent logged out successfully.",
-        "data": None
+        "message": "Parent logged out successfully"
     }

@@ -8,7 +8,7 @@ from typing import Optional
 
 router = APIRouter()
 
-# ==================== Request/Response Models ====================
+# ----------------------------------------------
 class FriendRequestIn(BaseModel):
     receiverChildUserName: str
     
@@ -21,11 +21,7 @@ class FriendRequestOut(BaseModel):
     senderLastName: str
     senderProfileIcon: Optional[str] = None
 
-# ==================== Authentication Endpoints ====================
-@router.post("/child/signup", status_code=status.HTTP_201_CREATED)
-def add_child(child_data: child_module.Child):
-    """Register a new child account"""
-    return child_module.create_child(child_data)
+# ----------------------- login -----------------------
 
 @router.post("/child/login", response_model=child_module.Token)
 async def login_for_access_token(
@@ -47,7 +43,7 @@ async def login_for_access_token(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
-# ==================== Child Profile Endpoints ====================
+# -------------------------- get name ------------------------------------
 @router.get("/child/name")
 def get_child_name(
     current_user: dict = Depends(child_module.getCurrentUser)
@@ -60,7 +56,7 @@ def get_child_name(
             detail="Child not found"
         )
     return child_name
-
+# -------------------------- get info ------------------------------------
 @router.get("/child/info")
 def get_child_info(
     current_user: dict = Depends(child_module.getCurrentUser)
@@ -73,7 +69,7 @@ def get_child_info(
             detail="Child not found"
         )
     return child_info
-
+# -------------------------- get settings ------------------------------------
 @router.put("/child/settings")
 def update_child_settings(
     settings: dict,
@@ -82,7 +78,12 @@ def update_child_settings(
     """Update child profile settings"""
     return child_module.update_settings(current_user['childUserName'], settings)
 
-# ==================== Friendship Endpoints ====================
+
+#-------------------------------------------------------------------------
+# ---------------------------- friendship --------------------------------
+#-------------------------------------------------------------------------
+
+# -------------------------- send friendship ------------------------------------
 @router.post("/child/friend/request", status_code=status.HTTP_201_CREATED)
 def send_friend_request(
     request: FriendRequestIn,
@@ -93,6 +94,8 @@ def send_friend_request(
         sender=current_user['childUserName'],
         receiver=request.receiverChildUserName
     )
+
+# -------------------------- get friendship request ------------------------------------
 
 @router.get("/child/friend/request")
 def view_friend_requests(
@@ -117,6 +120,8 @@ def view_friend_requests(
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# -------------------------- accept request upon request ID provided ------------------------------------
+
 @router.post("/child/friend/accept/{request_id}")
 def accept_friend_request(
     request_id: int,
@@ -127,6 +132,7 @@ def accept_friend_request(
         request_id=request_id,
         receiver=current_user['childUserName']
     )
+# -------------------------- reject request upon request ID provided ------------------------------------
 
 @router.post("/child/friend/reject/{request_id}")
 def reject_friend_request(
@@ -139,12 +145,16 @@ def reject_friend_request(
         receiver=current_user['childUserName']
     )
 
+# -------------------------- get friends ------------------------------------
+
 @router.get("/child/friends")
 def get_friends(
     current_user: dict = Depends(child_module.getCurrentUser)
 ):
     """Get list of all friends"""
     return child_module.get_friends(current_user['childUserName'])
+
+# -------------------------- block friends ------------------------------------
 
 @router.post("/child/friend/block/{friendUserName}")
 def block_friend(
@@ -157,11 +167,11 @@ def block_friend(
         friendUserName=friendUserName
     )
 
-# ==================== Session Management ====================
+# -------------------------- logout ------------------------------------
+
 @router.post("/child/logout")
 def child_logout():
     """Logout the current user (token invalidation handled client-side)"""
     return {
         "message": "Child logged out successfully",
-        "data": None
     }

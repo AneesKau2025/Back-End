@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext 
 from typing import Optional, List, Union
 
-# ==================== Base Models ====================
+# --------------------- base models -----------------------
 class Child(BaseModel):
     childUserName: str
     email: str
@@ -18,6 +18,17 @@ class Child(BaseModel):
     dateOfBirth: str
     timeControl: Optional[int] = None
     parentUserName: str
+    profileIcon: Optional[str] = None
+    
+# moodel with no inserted parent username for parent to sign their kids
+class ChildCreate(BaseModel):
+    childUserName: str
+    email: str
+    passwordHash: str
+    firstName: str
+    lastName: str
+    dateOfBirth: str  # datetime.date
+    timeControl: Optional[int] = None
     profileIcon: Optional[str] = None
 
 class Token(BaseModel):
@@ -43,7 +54,7 @@ class FriendResponse(BaseModel):
     message: str
     data: Optional[Union[dict, list]] = None
 
-# ----------------- constants -----------------
+# ------------------- constants --------------------
 SECRET_KEY = "ca19e71bbdef859185ed9928a973d7af6095d2c6b9a6bed3684570f40439562f"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
@@ -52,39 +63,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 revoked_tokens = set()  
 
 
-
-
-def create_child(child_data: Child) -> FriendResponse:
-    """Create new child account"""
-    with get_connection() as conn:
-        conn.execute(
-            sa.text("""
-                INSERT INTO Child 
-                (childUserName, email, passwordHash, firstName, lastName, dateOfBirth, timeControl, parentUserName, profileIcon)
-                VALUES 
-                (:username, :email, :password, :firstName, :lastName, :dob, :timeControl, :parentUserName, :profileIcon)
-            """),
-            {
-                "username": child_data.childUserName,
-                "email": child_data.email,
-                "password": child_data.passwordHash,
-                "firstName": child_data.firstName,
-                "lastName": child_data.lastName,
-                "dob": child_data.dateOfBirth,
-                "timeControl": child_data.timeControl,
-                "parentUserName": child_data.parentUserName,
-                "profileIcon": child_data.profileIcon
-            }
-        )
-        conn.commit()
-    
-    return FriendResponse(
-        message="Child registered successfully!",
-        data=child_data.dict()
-    )
+# ---------------------- get child -----------------------------
 
 def get_child(childUserName: str) -> Optional[dict]:
-    """Get child details by username"""
     with get_connection() as conn:
         result = conn.execute(
             sa.text("SELECT * FROM Child WHERE childUserName = :username"),
@@ -93,8 +74,9 @@ def get_child(childUserName: str) -> Optional[dict]:
     
     return dict(result) if result else None
 
+# ---------------------- get the name ----------------------
 def get_child_name(childUserName: str) -> Optional[dict]:
-    """Get child's first and last name"""
+    """childs first and last name"""
     with get_connection() as conn:
         result = conn.execute(
             sa.text("SELECT firstName, lastName FROM Child WHERE childUserName = :childUserName"),
@@ -103,6 +85,7 @@ def get_child_name(childUserName: str) -> Optional[dict]:
     
     return dict(result) if result else None
 
+# ---------------------- update settings ----------------------
 def update_settings(childUserName: str, settings: dict) -> FriendResponse:
     """Update child settings"""
     with get_connection() as conn:
@@ -129,8 +112,12 @@ def update_settings(childUserName: str, settings: dict) -> FriendResponse:
         message="Settings updated successfully!",
         data=settings
     )
-
+    
+#---------------------------------------------------------
 # ---------------------- Friendship  ---------------------
+#---------------------------------------------------------
+
+# ---------------------- create a friendship request ------------------------
 def create_friend_request(sender: str, receiver: str) -> FriendResponse:
     with get_connection() as conn:
         # Validate sender and receiver
@@ -174,6 +161,7 @@ def create_friend_request(sender: str, receiver: str) -> FriendResponse:
         data=None
     )
 
+# ---------------------- return the requests avialable ----------------------
 def get_friend_requests(child_username: str) -> List[dict]:
     """
     Get all friend requests where the current user is either the sender or the receiver.
@@ -204,7 +192,7 @@ def get_friend_requests(child_username: str) -> List[dict]:
     
     return [dict(row) for row in results]
 
-
+# ---------------------- accept friendship ----------------------
 def accept_friend_request(request_id: int, receiver: str) -> FriendResponse:
     """Accept a friend request"""
     with get_connection() as conn:
@@ -225,9 +213,8 @@ def accept_friend_request(request_id: int, receiver: str) -> FriendResponse:
                 detail="Friend request not found or already processed"
             )
 
-        request_child_username, receiver_child_username = request  # Unpacking the tuple
+        request_child_username, receiver_child_username = request  # unpacking the tuple
 
-        # Update request status
         conn.execute(
             sa.text("""
                 UPDATE Request
@@ -237,7 +224,7 @@ def accept_friend_request(request_id: int, receiver: str) -> FriendResponse:
             {"request_id": request_id}
         )
 
-        # Insert into Friendship table
+        # insert into Friendship table
         conn.execute(
             sa.text("""
                 INSERT INTO Friendship (childUserName1, childUserName2, status)
@@ -255,7 +242,7 @@ def accept_friend_request(request_id: int, receiver: str) -> FriendResponse:
         data=None
     )
 
-
+# ---------------------- reject friendship request ----------------------
 def reject_friend_request(request_id: int, receiver: str) -> FriendResponse:
     """Reject a friend request"""
     with get_connection() as conn:
@@ -295,6 +282,7 @@ def reject_friend_request(request_id: int, receiver: str) -> FriendResponse:
         data=None
     )
 
+# ---------------------- get the friends of the child ----------------------
 def get_friends(childUserName: str) -> FriendResponse:
     """Get all friends for a child"""
     with get_connection() as conn:
@@ -317,6 +305,7 @@ def get_friends(childUserName: str) -> FriendResponse:
         data=[dict(row) for row in results]
     )
 
+# ---------------------- block a friend ----------------------
 def block_friend(childUserName: str, friendUserName: str) -> FriendResponse:
     """Block a friend"""
     with get_connection() as conn:

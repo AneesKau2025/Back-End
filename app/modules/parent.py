@@ -47,6 +47,8 @@ def get_parent(parentUserName: str):
         return dict(result)  
 
 def create_parent(parent_data: Parent):
+    hashed_password = get_password_hash(parent_data.passwordHash)
+    parent_data.passwordHash = hashed_password
     """
     Insert new parent into the database.
     """
@@ -228,8 +230,8 @@ def authenticate_user(parentUserName: str, enteredPassword: str):
         return None  #  no user found
 
     dbPass = result['passwordHash']
-    if enteredPassword == dbPass:
-        return result  #  if password matches
+    if verify_password(enteredPassword, dbPass):
+        return result #  if password matches
     return None  #  password doesn't match
     
 #----------------------------------------------------
@@ -272,5 +274,10 @@ async def loginForAccessToken(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= "Incorrect username or password", headers={"WWW-Authenticat" : "Bearer"})
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = createAccessToken(data={"sub": Parent.userName}, expiresDelta= access_token_expires)
+    access_token = createAccessToken(data={"sub": user["parentUserName"]}, expiresDelta= access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
+#-------------------------- encryption of passwords ------------------------------------
+def get_password_hash(password):
+    return pwd_context.hash(password)
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)

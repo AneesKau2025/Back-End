@@ -346,7 +346,7 @@ def authenticate_user(childUserName: str, enteredPassword: str) -> Optional[dict
     if not result:
         return None
 
-    if enteredPassword == result['passwordHash']:
+    if verify_password(enteredPassword, result['passwordHash']):
         return dict(result)
     return None
 
@@ -378,3 +378,6 @@ async def getCurrentUser(token: str = Depends(oauth2_scheme)) -> dict:
         return user
     except JWTError:
         raise credentials_exception
+    
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)

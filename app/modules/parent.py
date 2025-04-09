@@ -70,7 +70,11 @@ def create_parent(parent_data: Parent):
 
 
 def create_child(child_data: Child) -> FriendResponse:
+    hashed_password = get_password_hash(child_data.passwordHash)
+    child_data.passwordHash = hashed_password
+
     """Create new child account, ensuring only the parent can do so"""
+    
     with get_connection() as conn:
         conn.execute(
             sa.text("""

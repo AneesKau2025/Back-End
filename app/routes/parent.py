@@ -4,6 +4,7 @@ from datetime import timedelta
 from app.modules import parent as parent_module
 from app.modules import child as child_module
 from app.modules import message as message_module 
+from fastapi import Request
 
 router = APIRouter()
 
@@ -101,10 +102,11 @@ def get_parent_info(current_user: dict = Depends(parent_module.getCurrentUser)):
     
 #----------------------- update settings -------------------------
 @router.put("/parent/settings")
-def update_parent_settings(
-    settings: dict, 
+async def update_parent_settings(
+    request: Request,
     current_user: dict = Depends(parent_module.getCurrentUser)
 ):
+    settings = await request.json() 
     parentUserName = current_user['parentUserName']
     result = parent_module.update_parent_settings(parentUserName, settings)
     return result

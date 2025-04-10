@@ -7,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext 
 from typing import Optional, List, Union
-from app.models import FriendResponse
 
 # --------------------- base models -----------------------
 class Child(BaseModel):

@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from app.modules import child as child_module
 from pydantic import BaseModel
 from typing import Optional
-
+from typing import List, Optional
 
 router = APIRouter()
 
@@ -91,6 +91,7 @@ def search_users(
 ):
     """Search for other children to add as friends"""
     return child_module.search_users(q, current_user['childUserName'])
+
 
     
 # -------------------------- send friendship ------------------------------------

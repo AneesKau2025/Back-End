@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext 
 from typing import Optional, List, Union
+from app.models import FriendResponse
 
 # --------------------- base models -----------------------
 class Child(BaseModel):
@@ -305,7 +306,7 @@ def get_friends(childUserName: str) -> FriendResponse:
         data=[dict(row) for row in results]
     )
 #-------------------------- friend search --------------------
-def search_users(query: str, current_child_username: str) -> List[dict]:
+def search_users(query: str, current_child_username: str) -> FriendResponse:
     with get_connection() as conn:
         results = conn.execute(
             sa.text("""
@@ -321,7 +322,10 @@ def search_users(query: str, current_child_username: str) -> List[dict]:
             }
         ).mappings().all()
     
-    return [dict(row) for row in results]
+    return FriendResponse(
+        message="Search results retrieved successfully",
+        data=[dict(row) for row in results]
+    )
 
 
 # ---------------------- block a friend ----------------------

@@ -9,10 +9,7 @@ class Database:
     """
 
     def __init__(self, config=None):
-        """
-        Initialize the Database object with the given configuration.
-        If no configuration is provided, the default settings are used.
-        """
+
         # Database connection configuration
         # You can override this by passing a custom config dictionary.
         if config is None:
@@ -65,12 +62,7 @@ class Database:
     def test_database_connection(self):
         """
         Tests the database connection by executing a sample query.
-        
-        This method is useful for checking connectivity during development
-        or as part of a health-check routine.
-        
-        :return: True if the connection and query are successful, False otherwise.
-        """
+"""
         results = self.execute_database_query("SELECT DATABASE();")
         if results is None:
             return False
@@ -80,9 +72,6 @@ class Database:
     def close_resources(self, cursor=None, connection=None):
         """
         Closes the cursor and the connection if they are open.
-        
-        :param cursor: The database cursor to be closed.
-        :param connection: The database connection to be closed.
         """
         if cursor is not None:
             try:

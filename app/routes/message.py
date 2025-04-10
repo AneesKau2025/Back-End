@@ -1,12 +1,23 @@
 from fastapi import APIRouter
-from app.modules import message as message_module  
+from app.modules import message as message_module
+from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.get("/messages/{user_id}")
-def read_messages(user_id: str):
-    return message_module.get_messages(user_id)
+# Dummy input model 
+class TestMessageInput(BaseModel):
+    senderChildUserName: str
+    receiverChildUserName: str
+    content: str
+    risk_level: int  # manually injected to simulate AI output
 
-@router.post("/messages/")
-def create_message(message_data: message_module.MessageSchema):
-    return message_module.send_message(message_data)
+@router.post("/message/test")
+def process_message(data: TestMessageInput):
+    message = message_module.MessageInput(
+        senderChildUserName=data.senderChildUserName,
+        receiverChildUserName=data.receiverChildUserName,
+        content=data.content,
+        riskID=data.risk_level
+    )
+    return message_module.process_message(message)
+

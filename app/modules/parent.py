@@ -138,21 +138,51 @@ def get_parent_info(parentUserName: str):
     
     return dict(result)
 
-def update_child_settings(parentUserName: str, childUserName: str, settings: dict):
+def update_parent_settings(parentUserName: str, settings: dict):
+    update_fields = []
+    update_values = {}
+
+    # نرفض مباشرة إذا أحد حاول يعدل الحقول المحظورة
+    if "parentUserName" in settings or "passwordHash" in settings:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot update the username or password from this endpoint."
+        )
+
+    # نضيف فقط الحقول المسموح بها إن كانت موجودة
+    if settings.get("email") is not None:
+        update_fields.append("email = :email")
+        update_values["email"] = settings["email"]
+
+    if settings.get("firstName") is not None:
+        update_fields.append("firstName = :firstName")
+        update_values["firstName"] = settings["firstName"]
+
+    if settings.get("lastName") is not None:
+        update_fields.append("lastName = :lastName")
+        update_values["lastName"] = settings["lastName"]
+
+    if not update_fields:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid fields provided to update."
+        )
+
+    update_values["parentUserName"] = parentUserName
+
+    query = f"""
+        UPDATE Parent
+        SET {', '.join(update_fields)}
+        WHERE parentUserName = :parentUserName
+    """
+
     with get_connection() as conn:
-        update_query = sa.text("""
-            UPDATE Child
-            SET timeControl = :timeControl, profileIcon = :profileIcon
-            WHERE childUserName = :childUserName AND parentUserName = :parentUserName
-        """)
-        conn.execute(update_query, {
-            "timeControl": settings.get("timeControl"),
-            "profileIcon": settings.get("profileIcon"),
-            "childUserName": childUserName,
-            "parentUserName": parentUserName,
-        })
+        conn.execute(sa.text(query), update_values)
         conn.commit()
-    return {"message": "Child settings updated successfully"}
+
+    return {"message": "Parent information updated successfully"}
+
+
 
 def delete_parent_account(parentUserName: str):
     with get_connection() as conn:

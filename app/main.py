@@ -9,6 +9,7 @@ from app.routes import child as child_routes
 from app.routes import parent as parent_routes
 from app.routes import message as message_routes
 
+
 # testing database connection before starting the app
 db = Database()
 if db.test_database_connection():

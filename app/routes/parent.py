@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from app.modules import parent as parent_module
 from app.modules import child as child_module
+from app.modules import message as message_module 
 
 router = APIRouter()
 
@@ -126,7 +127,7 @@ def set_child_time_control(
 @router.get("/parent/notifications")
 def get_notifications(current_user: dict = Depends(parent_module.getCurrentUser)):
     parentUserName = current_user['parentUserName']
-    notifications = parent_module.get_notifications(parentUserName)
+    notifications = message_module.get_notifications(parentUserName)
     return notifications
     
 

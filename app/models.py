@@ -93,7 +93,7 @@ riskTypeTable = sa.Table(
 )
 
 messageTable = sa.Table(
-    "Message",
+    "Notification",
     metadata,
     sa.Column("messageID", sa.Integer, primary_key=True, autoincrement=True),
     sa.Column("senderChildUserName", sa.String(20), sa.ForeignKey("Child.childUserName"), nullable=False),
@@ -104,13 +104,13 @@ messageTable = sa.Table(
     sa.Column("RiskID", sa.Integer, sa.ForeignKey("RiskType.riskID"), server_default="0"),
 )
 
-notificationTable = sa.Table(
+'''notificationTable = sa.Table(
     "Notification",
     metadata,
     sa.Column("notificationID", sa.Integer, primary_key=True, autoincrement=True),
     sa.Column("messageID", sa.Integer, sa.ForeignKey("Message.messageID"), nullable=False),
     sa.Column("parentUserName", sa.String(20), sa.ForeignKey("Parent.parentUserName"), nullable=False),
-)
+)'''
 
 #----------------------------------------------------
 

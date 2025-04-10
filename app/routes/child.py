@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta, datetime
 from app.modules import child as child_module
@@ -83,6 +83,16 @@ def update_child_settings(
 # ---------------------------- friendship --------------------------------
 #-------------------------------------------------------------------------
 
+#----------------------- search friends ------------------------
+@router.get("/child/search")
+def search_users(
+    q: str = Query(..., description="Search query for child usernames"),
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Search for other children to add as friends"""
+    return child_module.search_users(q, current_user['childUserName'])
+
+    
 # -------------------------- send friendship ------------------------------------
 @router.post("/child/friend/request", status_code=status.HTTP_201_CREATED)
 def send_friend_request(

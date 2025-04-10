@@ -304,6 +304,25 @@ def get_friends(childUserName: str) -> FriendResponse:
         message="Friends retrieved successfully",
         data=[dict(row) for row in results]
     )
+#-------------------------- friend search --------------------
+def search_users(query: str, current_child_username: str) -> List[dict]:
+    with get_connection() as conn:
+        results = conn.execute(
+            sa.text("""
+                SELECT childUserName, firstName, lastName, profileIcon
+                FROM Child
+                WHERE childUserName LIKE :query
+                AND childUserName != :current_user
+                LIMIT 10
+            """),
+            {
+                "query": f"%{query}%",
+                "current_user": current_child_username
+            }
+        ).mappings().all()
+    
+    return [dict(row) for row in results]
+
 
 # ---------------------- block a friend ----------------------
 def block_friend(childUserName: str, friendUserName: str) -> FriendResponse:
@@ -356,6 +375,7 @@ def createAccessToken(data: dict, expires_delta: Optional[timedelta] = None) -> 
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=30))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 async def getCurrentUser(token: str = Depends(oauth2_scheme)) -> dict:
     """Get current authenticated user from JWT token"""

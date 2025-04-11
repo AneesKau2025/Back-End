@@ -40,7 +40,8 @@ async def login_for_access_token(
         data={"sub": form_data.username},
         expires_delta=timedelta(minutes=child_module.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    
+    child_module.start_child_session(form_data.username)
+
     return {"access_token": access_token, "token_type": "bearer"}
 
 # -------------------------- get name ------------------------------------
@@ -77,6 +78,11 @@ def update_child_settings(
 ):
     """Update child profile settings"""
     return child_module.update_settings(current_user['childUserName'], settings)
+
+#---------------------------- get usage time left -----------------------------
+@router.get("/child/usage")
+def get_usage_status(current_user: dict = Depends(child_module.getCurrentUser)):
+    return child_module.check_usage_status(current_user['childUserName'])
 
 
 #-------------------------------------------------------------------------

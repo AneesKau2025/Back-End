@@ -112,17 +112,33 @@ async def update_parent_settings(
     return result
     
 
-#------------- setting time limits for parent's child  ------------------
-@router.put("/parent/children/{childUserName}/time-control")
-def set_child_time_control(
+#------------ see how much child have time ---------------
+@router.get("/parent/children/{childUserName}/usage")
+def get_child_usage(
     childUserName: str,
-    time_control: int,
     current_user: dict = Depends(parent_module.getCurrentUser)
 ):
     parentUserName = current_user['parentUserName']
-    result = parent_module.set_child_time_control(parentUserName, childUserName, time_control)   
-    return result
-    
+    return parent_module.get_child_usage_status(parentUserName, childUserName)
+
+#------------- setting time limits for parent child  ------------------
+@router.put("/parent/children/{childUserName}/usage/set")
+def set_child_usage_time(
+    childUserName: str,
+    minutes: int,
+    current_user: dict = Depends(parent_module.getCurrentUser)
+):
+    parentUserName = current_user['parentUserName']
+    return parent_module.set_child_usage_limit(parentUserName, childUserName, minutes)
+
+#--------------- reset the time to zero for setting --------------------
+@router.put("/parent/children/{childUserName}/usage/reset")
+def reset_child_usage_time(
+    childUserName: str,
+    current_user: dict = Depends(parent_module.getCurrentUser)
+):
+    parentUserName = current_user['parentUserName']
+    return parent_module.reset_child_usage(parentUserName, childUserName)
 
 
 #-------------------- get the notifications --------------------------

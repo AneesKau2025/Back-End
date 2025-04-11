@@ -354,9 +354,63 @@ def block_friend(childUserName: str, friendUserName: str) -> FriendResponse:
         data=None
     )
     
+#--------------------------- child Sessions ---------------------------------
+def start_child_session(childUserName: str):
+    with get_connection() as conn:
+        now = datetime.utcnow()
+        conn.execute(
+            sa.text("""
+                UPDATE Child
+                SET sessionStartTime = :now, isLocked = 0
+                WHERE childUserName = :username
+            """),
+            {"now": now, "username": childUserName}
+        )
+        conn.commit()
+        
+
+def check_usage_status(childUserName: str) -> dict:
+    with get_connection() as conn:
+        result = conn.execute(
+            sa.text("""
+                SELECT timeControl, sessionStartTime, isLocked
+                FROM Child
+                WHERE childUserName = :username
+            """),
+            {"username": childUserName}
+        ).mappings().first()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="الطفل غير موجود")
+
+        if result['isLocked']:
+            return {"remainingMinutes": 0, "isLocked": True}
+
+        time_allowed = result['timeControl']
+        start_time = result['sessionStartTime']
+
+        if not time_allowed or not start_time:
+            return {"remainingMinutes": time_allowed or 0, "isLocked": False}
+
+        now = datetime.utcnow()
+        elapsed_minutes = (now - start_time).total_seconds() / 60
+        remaining = time_allowed - elapsed_minutes
+
+        if remaining <= 0:
+            conn.execute(
+                sa.text("UPDATE Child SET isLocked = 1 WHERE childUserName = :username"),
+                {"username": childUserName}
+            )
+            conn.commit()
+            return {"remainingMinutes": 0, "isLocked": True}
+
+        return {"remainingMinutes": int(remaining), "isLocked": False}
+
 #-------------------------------------------------------------------------
 #-------------            child log ins                ------------------
 #-------------------------------------------------------------------------
+
+
 def authenticate_user(childUserName: str, enteredPassword: str) -> Optional[dict]:
     """Authenticate child user with username and password"""
     with get_connection() as conn:

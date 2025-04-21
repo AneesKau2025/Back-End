@@ -57,6 +57,23 @@ def get_child_name(
             detail="Child not found"
         )
     return child_name
+#--------------------------- get age -------------------------------------
+@router.get("/child/age")
+def get_child_age(
+    current_user: dict = Depends(child_module.getCurrentUser)
+):
+    """Get child's age based on date of birth"""
+    child = child_module.get_child(current_user['childUserName'])
+    if not child or not child.get("dateOfBirth"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Child not found or missing date of birth"
+        )
+
+    age = child_module.calculate_age(child["dateOfBirth"])
+    return {"age": age}
+
+
 # -------------------------- get info ------------------------------------
 @router.get("/child/info")
 def get_child_info(

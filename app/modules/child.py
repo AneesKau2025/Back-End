@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext 
 from typing import Optional, List, Union
+from datetime import date
 
 # --------------------- base models -----------------------
 class Child(BaseModel):
@@ -15,7 +16,7 @@ class Child(BaseModel):
     passwordHash: str
     firstName: str
     lastName: str
-    dateOfBirth: str
+    dateOfBirth: date
     timeControl: Optional[int] = None
     parentUserName: str
     profileIcon: Optional[str] = None
@@ -27,7 +28,7 @@ class ChildCreate(BaseModel):
     passwordHash: str
     firstName: str
     lastName: str
-    dateOfBirth: str  # datetime.date
+    dateOfBirth: date
     timeControl: Optional[int] = None
     profileIcon: Optional[str] = None
 
@@ -84,6 +85,14 @@ def get_child_name(childUserName: str) -> Optional[dict]:
         ).mappings().first()
     
     return dict(result) if result else None
+
+# ----------------------- calculate age -----------------------
+
+def calculate_age(date_of_birth):
+    today = date.today()
+    return today.year - date_of_birth.year - (
+        (today.month, today.day) < (date_of_birth.month, date_of_birth.day)
+    )
 
 # ---------------------- update settings ----------------------
 def update_settings(childUserName: str, settings: dict) -> FriendResponse:
